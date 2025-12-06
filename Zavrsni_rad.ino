@@ -39,7 +39,7 @@ void setup() {
   Serial.println("✅ MPU9250 Acc+Gyro ready.");
 
   // === GPS inicijalizacija ===
-  Serial1.begin(9600, SERIAL_8N1, 8, 9); // RX=9, TX=8
+  Serial1.begin(9600, SERIAL_8N1, 8, 9);  // RX=9, TX=8
   Serial.println("✅ GPS ready.");
 
   // === BLE inicijalizacija ===
@@ -48,19 +48,19 @@ void setup() {
   BLEService *service = server->createService("12345678-1234-5678-1234-56789abcdef0");
 
   tempChar = service->createCharacteristic(
-      "abcd0001-1234-5678-1234-56789abcdef0",
-      BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
+    "abcd0001-1234-5678-1234-56789abcdef0",
+    BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
   tempChar->addDescriptor(new BLE2902());
 
   gpsChar = service->createCharacteristic(
-      "abcd0002-1234-5678-1234-56789abcdef0",
-      BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
+    "abcd0002-1234-5678-1234-56789abcdef0",
+    BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
   gpsChar->addDescriptor(new BLE2902());
 
   // === Nova BLE karakteristika: IMU ===
   imuChar = service->createCharacteristic(
-      "abcd0003-1234-5678-1234-56789abcdef0",
-      BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
+    "abcd0003-1234-5678-1234-56789abcdef0",
+    BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
   imuChar->addDescriptor(new BLE2902());
 
   service->start();
@@ -79,9 +79,7 @@ void loop() {
   float h = bme.readHumidity();
   float p = bme.readPressure() / 100.0F;
 
-  String bmeJson = "{\"t\":" + String(t, 2) +
-                   ",\"h\":" + String(h, 2) +
-                   ",\"p\":" + String(p, 2) + "}";
+  String bmeJson = "{\"t\":" + String(t, 2) + ",\"h\":" + String(h, 2) + ",\"p\":" + String(p, 2) + "}";
 
   tempChar->setValue(bmeJson.c_str());
   tempChar->notify();
@@ -92,12 +90,7 @@ void loop() {
   mpu.accelUpdate();
   mpu.gyroUpdate();
 
-  String imuJson = "{\"ax\":" + String(mpu.accelX(), 3) +
-                   ",\"ay\":" + String(mpu.accelY(), 3) +
-                   ",\"az\":" + String(mpu.accelZ(), 3) +
-                   ",\"gx\":" + String(mpu.gyroX(), 3) +
-                   ",\"gy\":" + String(mpu.gyroY(), 3) +
-                   ",\"gz\":" + String(mpu.gyroZ(), 3) + "}";
+  String imuJson = "{\"ax\":" + String(mpu.accelX(), 3) + ",\"ay\":" + String(mpu.accelY(), 3) + ",\"az\":" + String(mpu.accelZ(), 3) + ",\"gx\":" + String(mpu.gyroX(), 3) + ",\"gy\":" + String(mpu.gyroY(), 3) + ",\"gz\":" + String(mpu.gyroZ(), 3) + "}";
 
   imuChar->setValue(imuJson.c_str());
   imuChar->notify();
@@ -105,15 +98,33 @@ void loop() {
   Serial.println("🌀 BLE IMU: " + imuJson);
 
   // === GPS samo kad ima update ===
+  // === BLE slanje GPS podataka ===
   if (gps.location.isUpdated()) {
-    String gpsJson = "{\"lat\":" + String(gps.location.lat(), 6) +
-                     ",\"lng\":" + String(gps.location.lng(), 6) + "}";
+
+    double lat = gps.location.lat();
+    double lng = gps.location.lng();
+    double alt = gps.altitude.meters();
+    double spd = gps.speed.mps();      // mp/S
+    int sats = gps.satellites.value();  // broj satelita
+    double hdop = gps.hdop.hdop();      // horizontal dilution
+
+    String gpsJson = "{"
+                     "\"lat\":"
+                     + String(lat, 6) + ","
+                                        "\"lng\":"
+                     + String(lng, 6) + ","
+                                        "\"alt\":"
+                     + String(alt, 2) + ","
+                                        "\"spd\":"
+                     + String(spd, 2) + ","
+                                        "\"sat\":"
+                     + String(sats) + "}";
 
     gpsChar->setValue(gpsJson.c_str());
     gpsChar->notify();
 
-    Serial.println("📍 BLE GPS: " + gpsJson);
+    Serial.println("📡 Sent BLE GPS data: " + gpsJson);
   }
 
-  delay(1000); // možeš povećati brzinu kasnije
+  delay(1000);
 }
